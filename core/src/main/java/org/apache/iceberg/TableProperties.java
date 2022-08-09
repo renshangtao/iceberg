@@ -20,6 +20,7 @@
 package org.apache.iceberg;
 
 import java.util.Set;
+import org.apache.iceberg.encryption.EncryptionAlgorithm;
 import org.apache.iceberg.relocated.com.google.common.collect.ImmutableSet;
 
 public class TableProperties {
@@ -352,4 +353,39 @@ public class TableProperties {
 
   public static final String UPSERT_ENABLED = "write.upsert.enabled";
   public static final boolean UPSERT_ENABLED_DEFAULT = false;
+
+
+  /**
+   * Encryption manager type
+   */
+  public static final String ENCRYPTION_MANAGER_TYPE = "encryption.manager.type";
+  public static final String ENCRYPTION_MANAGER_TYPE_PLAINTEXT = "plaintext";
+  public static final String ENCRYPTION_MANAGER_TYPE_SINGLE_ENVELOPE = "envelope";
+  public static final String ENCRYPTION_MANAGER_TYPE_DOUBLE_ENVELOPE = "double.envelope";
+
+  public static final String ENCRYPTION_TABLE_KEY = "encryption.table.key";
+
+  public static final String ENCRYPTION_COLUMN_KEYS = "encryption.column.keys";
+
+  public static final String ENCRYPTION_DEK_LENGTH = "encryption.data.key.length";
+  public static final int ENCRYPTION_DEK_LENGTH_DEFAULT = 16;
+
+  public static final String ENCRYPTION_DATA_ALGORITHM = "encryption.data.algorithm";
+  public static final String ENCRYPTION_DATA_ALGORITHM_DEFAULT = EncryptionAlgorithm.AES_GCM.toString();
+
+  /**
+   * Allow file format native encryption instead of
+   * encrypting the entire file through Iceberg encryption stream.
+   * 目前无用
+   */
+
+  public static final String ENCRYPTION_PUSHDOWN_ENABLED = "encryption.pushdown";
+  public static final boolean ENCRYPTION_PUSHDOWN_ENABLED_DEFAULT = false;
+
+  /**
+   * Implementation of the KMS client for envelope encryption.
+   */
+  public static final String ENCRYPTION_KMS_CLIENT_IMPL = "encryption.kms.client-impl";
+  public static final String ENCRYPTION_KMS_CLIENT_IMPL_DEFAULT = "AwsKmsClient";
+
 }

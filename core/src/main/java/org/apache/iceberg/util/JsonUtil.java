@@ -25,6 +25,8 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.util.Base64;
 import java.io.StringWriter;
 import java.io.UncheckedIOException;
 import java.util.Iterator;
@@ -246,6 +248,11 @@ public class JsonUtil {
         .build();
   }
 
+  public static ByteBuffer getBytesOrNull(String property, JsonNode node) {
+    String bytesStr = getStringOrNull(property, node);
+    return bytesStr == null ? null : ByteBuffer.wrap(Base64.getDecoder().decode(bytesStr));
+  }
+
   public static void writeIntegerFieldIf(boolean condition, String key, Integer value, JsonGenerator generator)
       throws IOException {
     if (condition) {
@@ -257,6 +264,20 @@ public class JsonUtil {
       throws IOException {
     if (condition) {
       generator.writeNumberField(key, value);
+    }
+  }
+
+  public static void writeStringIf(boolean condition, String key, String value, JsonGenerator generator)
+          throws IOException {
+    if (condition) {
+      generator.writeStringField(key, value);
+    }
+  }
+
+  public static void writeBinaryIf(boolean condition, String key, ByteBuffer value, JsonGenerator generator)
+          throws IOException {
+    if (condition) {
+      generator.writeStringField(key, Base64.getEncoder().encodeToString(value.array()));
     }
   }
 

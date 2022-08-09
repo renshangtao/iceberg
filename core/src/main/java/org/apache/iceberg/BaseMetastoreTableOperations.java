@@ -24,7 +24,10 @@ import java.util.UUID;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Function;
 import java.util.function.Predicate;
-import org.apache.iceberg.encryption.EncryptionManager;
+
+import org.apache.iceberg.catalog.Catalog;
+import org.apache.iceberg.common.DynConstructors;
+import org.apache.iceberg.encryption.*;
 import org.apache.iceberg.exceptions.AlreadyExistsException;
 import org.apache.iceberg.exceptions.CommitFailedException;
 import org.apache.iceberg.exceptions.NoSuchTableException;
@@ -39,14 +42,7 @@ import org.apache.iceberg.util.Tasks;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static org.apache.iceberg.TableProperties.COMMIT_NUM_STATUS_CHECKS;
-import static org.apache.iceberg.TableProperties.COMMIT_NUM_STATUS_CHECKS_DEFAULT;
-import static org.apache.iceberg.TableProperties.COMMIT_STATUS_CHECKS_MAX_WAIT_MS;
-import static org.apache.iceberg.TableProperties.COMMIT_STATUS_CHECKS_MAX_WAIT_MS_DEFAULT;
-import static org.apache.iceberg.TableProperties.COMMIT_STATUS_CHECKS_MIN_WAIT_MS;
-import static org.apache.iceberg.TableProperties.COMMIT_STATUS_CHECKS_MIN_WAIT_MS_DEFAULT;
-import static org.apache.iceberg.TableProperties.COMMIT_STATUS_CHECKS_TOTAL_WAIT_MS;
-import static org.apache.iceberg.TableProperties.COMMIT_STATUS_CHECKS_TOTAL_WAIT_MS_DEFAULT;
+import static org.apache.iceberg.TableProperties.*;
 
 public abstract class BaseMetastoreTableOperations implements TableOperations {
   private static final Logger LOG = LoggerFactory.getLogger(BaseMetastoreTableOperations.class);
@@ -273,6 +269,48 @@ public abstract class BaseMetastoreTableOperations implements TableOperations {
     FAILURE,
     SUCCESS,
     UNKNOWN
+  }
+
+  public EncryptionManager encryption() {
+    TableMetadata tmpMetadata = current();
+    if (tmpMetadata == null) {
+      return new PlaintextEncryptionManager();
+    }
+
+    String encryptionType = PropertyUtil.propertyAsString(tmpMetadata.properties(), ENCRYPTION_MANAGER_TYPE,
+            ENCRYPTION_MANAGER_TYPE_PLAINTEXT);
+    String encryptionKeyId = PropertyUtil.propertyAsString(tmpMetadata.properties(), ENCRYPTION_TABLE_KEY,
+            "");
+    String encryptionAlgorithm = PropertyUtil.propertyAsString(tmpMetadata.properties(), ENCRYPTION_DATA_ALGORITHM,
+            ENCRYPTION_DATA_ALGORITHM_DEFAULT);
+    String kmsClientImpl = PropertyUtil.propertyAsString(tmpMetadata.properties(), ENCRYPTION_KMS_CLIENT_IMPL,
+            ENCRYPTION_KMS_CLIENT_IMPL_DEFAULT);
+    int dataKeyLength = PropertyUtil.propertyAsInt(tmpMetadata.properties(), ENCRYPTION_DEK_LENGTH,
+            ENCRYPTION_DEK_LENGTH_DEFAULT);
+
+    /* 未加密 */
+    if (encryptionType.equals(ENCRYPTION_MANAGER_TYPE_PLAINTEXT)) {
+      return new PlaintextEncryptionManager();
+    } else {
+
+      EnvelopeConfiguration dataEncryptionConfig = EnvelopeConfiguration.builder()
+            .singleWrap(encryptionKeyId)
+            .useAlgorithm(EncryptionAlgorithm.valueOf(encryptionAlgorithm))
+            .build();
+
+      DynConstructors.Ctor<Catalog> ctor;
+
+      try {
+        ctor = DynConstructors.builder(KmsClient.class).impl(kmsClientImpl).buildChecked();
+      } catch (NoSuchMethodException e) {
+        LOG.error(" ===== Cannot initialize Catalog implementation {}: {}", kmsClientImpl, e.getMessage());
+        return new PlaintextEncryptionManager();
+      }
+
+      KmsClient kmsClient = (KmsClient) ctor.newInstance();
+
+      return new EnvelopeEncryptionManager(true, dataEncryptionConfig, kmsClient, dataKeyLength);
+    }
   }
 
   /**

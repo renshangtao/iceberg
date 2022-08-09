@@ -19,8 +19,7 @@
 
 package org.apache.iceberg;
 
-import org.apache.iceberg.encryption.EncryptionManager;
-import org.apache.iceberg.encryption.PlaintextEncryptionManager;
+import org.apache.iceberg.encryption.*;
 import org.apache.iceberg.io.FileIO;
 import org.apache.iceberg.io.LocationProvider;
 

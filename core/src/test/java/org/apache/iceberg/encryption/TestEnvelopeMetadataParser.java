@@ -19,15 +19,25 @@
 
 package org.apache.iceberg.encryption;
 
-/**
- * This interface is applied to OutputFile and InputFile implementations, in order to enable delivery of crypto
- * parameters (such as encryption keys etc) from the Iceberg key management module to the writers/readers of file
- * formats that support encryption natively (Parquet and ORC).
- *
- * 该接口应用于输出文件和输入文件实现，以便能够将加密参数（如加密密钥等）从Iceberg密钥管理模块传递给本机支持加密的文件格式（Parquet和ORC）的编写器/读取器。
- */
-public interface NativelyEncryptedFile {
-  NativeFileCryptoParameters nativeCryptoParameters();
+import java.nio.ByteBuffer;
+import org.junit.Assert;
+import org.junit.Test;
 
-  void setNativeCryptoParameters(NativeFileCryptoParameters nativeCryptoParameters);
+public class TestEnvelopeMetadataParser {
+
+    @Test
+    public void testParser() {
+        String kekId = "kek1";
+        String wrappedDek = "WrappedDek";
+        EncryptionAlgorithm algo = EncryptionAlgorithm.AES_GCM;
+        EnvelopeMetadata metadata = new EnvelopeMetadata(kekId, wrappedDek, algo);
+        ByteBuffer serialized = EnvelopeMetadataParser.toJson(metadata);
+
+        EnvelopeMetadata parsedMetadata = EnvelopeMetadataParser.fromJson(serialized);
+        Assert.assertEquals(parsedMetadata.kekId(), kekId);
+        Assert.assertEquals(parsedMetadata.wrappedDek(), wrappedDek);
+        Assert.assertEquals(parsedMetadata.algorithm(), algo);
+        // Also test object comparison
+        Assert.assertEquals(parsedMetadata, metadata);
+    }
 }
